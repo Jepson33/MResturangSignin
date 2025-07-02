@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
+import './style.css';
 
-function App() {
+export default function App() {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -58,7 +59,6 @@ function App() {
         setResponseMsg(`⚠️ ${json.message || 'Något gick fel.'}`);
       }
     } catch (error) {
-      console.error('❌ Fetch-fel:', error);
       setResponseMsg('❌ Kunde inte ansluta till servern.');
     } finally {
       scrollToResponse();
@@ -88,7 +88,6 @@ function App() {
         setResponseMsg(`❌ ${data.message || 'Google-inloggning misslyckades.'}`);
       }
     } catch (error) {
-      console.error('❌ Google login error:', error);
       setResponseMsg('❌ Något gick fel vid Google-inloggning.');
     } finally {
       scrollToResponse();
@@ -96,87 +95,84 @@ function App() {
   };
 
   const handleGoogleError = () => {
-    console.error('❌ Google-inloggning misslyckades');
     setResponseMsg('❌ Google-inloggning misslyckades.');
     scrollToResponse();
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '2rem auto', fontFamily: 'sans-serif' }}>
-      <h2>Registrera dig</h2>
+    <div className="register-bg">
+      <div className="register-card">
+        <div className="register-header">
+          <div className="logo-circle">M</div>
+          <h2>Registrera dig</h2>
+          <p>Fyll i dina uppgifter nedan för att få tillgång till erbjudanden & förmåner.</p>
+        </div>
 
-      {googleUser && (
-        <p style={{ backgroundColor: '#e0ffe0', padding: '0.5rem', borderRadius: '4px' }}>
-          Inloggad som <strong>{googleUser.name}</strong> ({googleUser.email})
-        </p>
-      )}
+        {googleUser && (
+          <div className="success-msg">
+            Inloggad som <strong>{googleUser.name}</strong> ({googleUser.email})
+          </div>
+        )}
 
-      <form onSubmit={handleSubmit}>
-        <input
-          name="name"
-          placeholder="Namn"
-          value={formData.name}
-          onChange={handleChange}
-          required
-          style={{ width: '100%', marginBottom: '0.5rem' }}
-        />
-        <input
-          name="phone"
-          placeholder="Telefonnummer"
-          value={formData.phone}
-          onChange={handleChange}
-          required
-          style={{ width: '100%', marginBottom: '0.5rem' }}
-        />
-        <input
-          name="birthday"
-          placeholder="Födelsedatum (ÅÅÅÅ-MM-DD)"
-          value={formData.birthday}
-          onChange={handleChange}
-          required
-          style={{ width: '100%', marginBottom: '0.5rem' }}
-        />
-        <input
-          name="email"
-          type="email"
-          placeholder="E-post"
-          value={formData.email}
-          onChange={handleChange}
-          required
-          style={{ width: '100%', marginBottom: '0.5rem' }}
-        />
-
-        <label style={{ display: 'block', marginBottom: '1rem' }}>
+        <form onSubmit={handleSubmit} className="register-form">
           <input
-            type="checkbox"
-            name="consent"
-            checked={formData.consent}
+            name="name"
+            placeholder="Namn"
+            value={formData.name}
             onChange={handleChange}
             required
-          />{' '}
-          Jag godkänner villkoren & GDPR
-        </label>
+          />
+          <input
+            name="phone"
+            placeholder="Telefonnummer"
+            value={formData.phone}
+            onChange={handleChange}
+            required
+          />
+          <input
+            name="birthday"
+            placeholder="Födelsedatum (ÅÅÅÅ-MM-DD)"
+            value={formData.birthday}
+            onChange={handleChange}
+            required
+          />
+          <input
+            name="email"
+            type="email"
+            placeholder="E-post"
+            value={formData.email}
+            onChange={handleChange}
+            required
+          />
 
-        <button type="submit" style={{ width: '100%' }}>Skicka</button>
-      </form>
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              name="consent"
+              checked={formData.consent}
+              onChange={handleChange}
+              required
+            />
+            Jag godkänner villkoren & GDPR
+          </label>
 
-      <p
-        ref={responseRef}
-        style={{
-          color: responseMsg.startsWith('✅') ? 'green' : 'red',
-          marginTop: '1rem',
-          minHeight: '1.5rem'
-        }}
-      >
-        {responseMsg}
-      </p>
+          <button type="submit">Skicka</button>
+        </form>
 
-      <hr style={{ margin: '2rem 0' }} />
+        <p
+          ref={responseRef}
+          className={`response-msg ${responseMsg.startsWith('✅') ? 'success' : 'error'}`}
+        >
+          {responseMsg}
+        </p>
 
-      <h3>Eller logga in med Google</h3>
-      <GoogleLogin onSuccess={handleGoogleSuccess} onError={handleGoogleError} width="100%" />
+        <div className="google-divider">
+          <span>Eller logga in med Google</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <GoogleLogin onSuccess={handleGoogleSuccess} onError={handleGoogleError} width="300" />
+        </div>
+      </div>
     </div>
   );
 }
-
-export default App;
