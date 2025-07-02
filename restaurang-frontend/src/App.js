@@ -1,24 +1,25 @@
-import React, { useState, useRef } from 'react';
-import { GoogleLogin } from '@react-oauth/google';
-import './style.css';
+import React, { useState, useRef } from "react";
+import { GoogleLogin } from "@react-oauth/google";
+import "./style.css";
 
 export default function App() {
   const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    birthday: '',
-    email: '',
+    name: "",
+    phone: "",
+    birthday: "",
+    email: "",
     consent: false,
   });
-  const [responseMsg, setResponseMsg] = useState('');
+  const [responseMsg, setResponseMsg] = useState("");
   const [googleUser, setGoogleUser] = useState(null);
   const responseRef = useRef(null);
 
-  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isValidEmail = (email) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
+    setFormData({ ...formData, [name]: type === "checkbox" ? checked : value });
   };
 
   const handleSubmit = async (e) => {
@@ -26,40 +27,40 @@ export default function App() {
     const { name, phone, birthday, email, consent } = formData;
 
     if (!name || !phone || !birthday || !email) {
-      setResponseMsg('❌ Alla fält måste fyllas i.');
+      setResponseMsg("❌ Alla fält måste fyllas i.");
       scrollToResponse();
       return;
     }
 
     if (!isValidEmail(email)) {
-      setResponseMsg('❌ Ogiltig e-postadress.');
+      setResponseMsg("❌ Ogiltig e-postadress.");
       scrollToResponse();
       return;
     }
 
     if (!consent) {
-      setResponseMsg('❌ Du måste godkänna villkoren.');
+      setResponseMsg("❌ Du måste godkänna villkoren.");
       scrollToResponse();
       return;
     }
 
     try {
-      const res = await fetch('http://localhost:3001/api/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("http://localhost:3001/api/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, phone, birthday, email }),
       });
 
       const json = await res.json();
 
       if (res.ok) {
-        setResponseMsg('✅ Tack för din registrering! Ett bekräftelsemail har skickats.');
-        setFormData({ name: '', phone: '', birthday: '', email: '', consent: false });
+        setResponseMsg("✅ Tack för din registrering! Ett bekräftelsemail har skickats.");
+        setFormData({ name: "", phone: "", birthday: "", email: "", consent: false });
       } else {
-        setResponseMsg(`⚠️ ${json.message || 'Något gick fel.'}`);
+        setResponseMsg(`⚠️ ${json.message || "Något gick fel."}`);
       }
     } catch (error) {
-      setResponseMsg('❌ Kunde inte ansluta till servern.');
+      setResponseMsg("❌ Kunde inte ansluta till servern.");
     } finally {
       scrollToResponse();
     }
@@ -67,15 +68,15 @@ export default function App() {
 
   const scrollToResponse = () => {
     setTimeout(() => {
-      responseRef.current?.scrollIntoView({ behavior: 'smooth' });
+      responseRef.current?.scrollIntoView({ behavior: "smooth" });
     }, 100);
   };
 
   const handleGoogleSuccess = async ({ credential }) => {
     try {
-      const res = await fetch('http://localhost:3001/api/google-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("http://localhost:3001/api/google-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ credential }),
       });
 
@@ -85,35 +86,30 @@ export default function App() {
         setGoogleUser(data.user);
         setResponseMsg(`✅ Inloggad som ${data.user.name}`);
       } else {
-        setResponseMsg(`❌ ${data.message || 'Google-inloggning misslyckades.'}`);
+        setResponseMsg(`❌ ${data.message || "Google-inloggning misslyckades."}`);
       }
     } catch (error) {
-      setResponseMsg('❌ Något gick fel vid Google-inloggning.');
+      setResponseMsg("❌ Något gick fel vid Google-inloggning.");
     } finally {
       scrollToResponse();
     }
   };
 
   const handleGoogleError = () => {
-    setResponseMsg('❌ Google-inloggning misslyckades.');
+    setResponseMsg("❌ Google-inloggning misslyckades.");
     scrollToResponse();
   };
 
   return (
-    <div className="register-bg">
+    <div className="bg-gradient">
       <div className="register-card">
-        <div className="register-header">
-          <div className="logo-circle">M</div>
-          <h2>Registrera dig</h2>
-          <p>Fyll i dina uppgifter nedan för att få tillgång till erbjudanden & förmåner.</p>
+        <div className="logo-circle">
+          <span className="logo-text">M</span>
         </div>
-
-        {googleUser && (
-          <div className="success-msg">
-            Inloggad som <strong>{googleUser.name}</strong> ({googleUser.email})
-          </div>
-        )}
-
+        <h2 className="register-title">Registrera dig</h2>
+        <p className="register-desc">
+          Fyll i dina uppgifter nedan för att få tillgång till erbjudanden & förmåner.
+        </p>
         <form onSubmit={handleSubmit} className="register-form">
           <input
             name="name"
@@ -121,6 +117,8 @@ export default function App() {
             value={formData.name}
             onChange={handleChange}
             required
+            className="input"
+            autoComplete="off"
           />
           <input
             name="phone"
@@ -128,13 +126,19 @@ export default function App() {
             value={formData.phone}
             onChange={handleChange}
             required
+            className="input"
+            autoComplete="off"
           />
           <input
             name="birthday"
-            placeholder="Födelsedatum (ÅÅÅÅ-MM-DD)"
+            type="date"
+            placeholder="Födelsedatum"
             value={formData.birthday}
             onChange={handleChange}
             required
+            className="input"
+            autoComplete="off"
+            max={new Date().toISOString().split("T")[0]}
           />
           <input
             name="email"
@@ -143,6 +147,8 @@ export default function App() {
             value={formData.email}
             onChange={handleChange}
             required
+            className="input"
+            autoComplete="off"
           />
 
           <label className="checkbox-label">
@@ -156,21 +162,29 @@ export default function App() {
             Jag godkänner villkoren & GDPR
           </label>
 
-          <button type="submit">Skicka</button>
+          <button type="submit" className="btn-gradient">
+            Skicka
+          </button>
         </form>
 
         <p
           ref={responseRef}
-          className={`response-msg ${responseMsg.startsWith('✅') ? 'success' : 'error'}`}
+          className={`response-msg ${
+            responseMsg.startsWith("✅") ? "success" : responseMsg ? "error" : ""
+          }`}
         >
           {responseMsg}
         </p>
 
-        <div className="google-divider">
+        <div className="divider">
           <span>Eller logga in med Google</span>
         </div>
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <GoogleLogin onSuccess={handleGoogleSuccess} onError={handleGoogleError} width="300" />
+        <div className="google-btn-wrap">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            width="100%"
+          />
         </div>
       </div>
     </div>
