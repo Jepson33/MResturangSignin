@@ -26,20 +26,39 @@ const twilioClient = twilio(
   process.env.TWILIO_AUTH_TOKEN
 );
 
+// ---- Hjälpfunktion: Gör om nummer till internationellt format ----
+function formatPhoneNumber(num) {
+  if (!num) return "";
+  let n = String(num).replace(/\s+/g, '').replace(/-/g, '');
+  if (n.startsWith("+")) return n;
+  if (n.startsWith("00")) return "+" + n.slice(2);
+  if (n.startsWith("07")) return "+46" + n.slice(1);
+  return null; // Felaktigt format
+}
+
 // ----------- SMS: Skicka till FLERA mottagare! -----------
-// POST /api/send-sms   { recipients: ["+4673...", "+4670..."], message: "..." }
 app.post('/api/send-sms', async (req, res) => {
   const { recipients, message } = req.body;
   if (!message || !Array.isArray(recipients) || recipients.length === 0) {
     return res.status(400).json({ error: "Mottagare och meddelande krävs." });
   }
+
+  // Formatera och filtrera nummer
+  const formattedRecipients = recipients
+    .map(formatPhoneNumber)
+    .filter(Boolean);
+
+  if (formattedRecipients.length === 0) {
+    return res.status(400).json({ error: "Inga giltiga mobilnummer i rätt format." });
+  }
+
   try {
     const results = await Promise.all(
-      recipients.map(to =>
+      formattedRecipients.map(to =>
         twilioClient.messages.create({
           body: message,
           from: process.env.TWILIO_PHONE_NUMBER,
-          to: to, // måste vara med landskod, t.ex. "+4670xxxxxxx"
+          to: to,
         })
       )
     );
