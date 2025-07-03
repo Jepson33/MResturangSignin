@@ -6,7 +6,7 @@ const nodemailer = require('nodemailer');
 const { OAuth2Client } = require('google-auth-library');
 const cron = require('node-cron');
 const { OpenAI } = require('openai');
-const twilio = require('twilio'); // <--- Twilio SDK
+const twilio = require('twilio');
 
 const app = express();
 
@@ -21,32 +21,37 @@ app.use(express.json());
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// Twilio-klient
 const twilioClient = twilio(
   process.env.TWILIO_ACCOUNT_SID,
   process.env.TWILIO_AUTH_TOKEN
 );
 
-// ----------- NYTT: SMS-ENDPOINT -----------
+// ----------- SMS: Skicka till FLERA mottagare! -----------
+// POST /api/send-sms   { recipients: ["+4673...", "+4670..."], message: "..." }
 app.post('/api/send-sms', async (req, res) => {
-  const { to, message } = req.body;
-  if (!to || !message) {
-    return res.status(400).json({ error: "Mottagarens nummer och meddelande krävs." });
+  const { recipients, message } = req.body;
+  if (!message || !Array.isArray(recipients) || recipients.length === 0) {
+    return res.status(400).json({ error: "Mottagare och meddelande krävs." });
   }
   try {
-    const response = await twilioClient.messages.create({
-      body: message,
-      from: process.env.TWILIO_PHONE_NUMBER, // t.ex. "+13204560647"
-      to: to, // måste ha "+" och landskod
-    });
-    res.json({ success: true, sid: response.sid });
+    const results = await Promise.all(
+      recipients.map(to =>
+        twilioClient.messages.create({
+          body: message,
+          from: process.env.TWILIO_PHONE_NUMBER,
+          to: to, // måste vara med landskod, t.ex. "+4670xxxxxxx"
+        })
+      )
+    );
+    res.json({ success: true, results });
   } catch (err) {
     console.error("Twilio error:", err);
     res.status(500).json({ error: "Kunde inte skicka sms.", details: err.message });
   }
 });
-// ----------- SLUT: SMS-ENDPOINT -----------
+// ----------- SLUT SMS -----------
 
+// ---- Nodemailer för E-post ----
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
