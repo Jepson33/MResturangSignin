@@ -5,6 +5,7 @@ const { createClient } = require('@supabase/supabase-js');
 const nodemailer = require('nodemailer');
 const { OAuth2Client } = require('google-auth-library');
 const cron = require('node-cron');
+const { OpenAI } = require('openai'); // <-- Lägg till OpenAI SDK
 
 const app = express();
 
@@ -35,6 +36,32 @@ transporter.verify((error) => {
 
 const isValidDate = (dateString) => /^\d{4}-\d{2}-\d{2}$/.test(dateString);
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+// ----------- CHATBOT ENDPOINT -----------
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+app.post('/api/chatbot', async (req, res) => {
+  const { message } = req.body;
+  if (!message) return res.status(400).json({ error: "No message sent" });
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo", // Eller "gpt-4o" om du har tillgång!
+      messages: [
+        { role: "system", content: "Du är en trevlig svensk AI-assistent för restaurang/hotell-admin. Svara tydligt och kortfattat." },
+        { role: "user", content: message }
+      ],
+      max_tokens: 300,
+    });
+
+    const reply = completion.choices[0]?.message?.content ?? "Inget svar.";
+    res.json({ reply });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Chatbot error" });
+  }
+});
+// ----------- SLUT CHATBOT ENDPOINT -----------
 
 // Registrering
 app.post('/api/signup', async (req, res) => {
