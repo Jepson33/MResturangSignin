@@ -6,6 +6,7 @@ const nodemailer = require('nodemailer');
 const { OAuth2Client } = require('google-auth-library');
 const cron = require('node-cron');
 const { OpenAI } = require('openai');
+const twilio = require('twilio'); // <--- Twilio SDK
 
 const app = express();
 
@@ -19,6 +20,32 @@ app.use(express.json());
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// Twilio-klient
+const twilioClient = twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
+
+// ----------- NYTT: SMS-ENDPOINT -----------
+app.post('/api/send-sms', async (req, res) => {
+  const { to, message } = req.body;
+  if (!to || !message) {
+    return res.status(400).json({ error: "Mottagarens nummer och meddelande krävs." });
+  }
+  try {
+    const response = await twilioClient.messages.create({
+      body: message,
+      from: process.env.TWILIO_PHONE_NUMBER, // t.ex. "+13204560647"
+      to: to, // måste ha "+" och landskod
+    });
+    res.json({ success: true, sid: response.sid });
+  } catch (err) {
+    console.error("Twilio error:", err);
+    res.status(500).json({ error: "Kunde inte skicka sms.", details: err.message });
+  }
+});
+// ----------- SLUT: SMS-ENDPOINT -----------
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -44,7 +71,6 @@ app.post('/api/chatbot', async (req, res) => {
   if (!message) return res.status(400).json({ error: "No message sent" });
 
   try {
-    // Viktigt: rätt syntax för nya openai SDK!
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo", // eller gpt-4o
       messages: [
@@ -54,7 +80,6 @@ app.post('/api/chatbot', async (req, res) => {
       max_tokens: 300,
     });
 
-    // Ny SDK-syntax!
     const reply = completion.choices?.[0]?.message?.content || "Inget svar.";
     res.json({ reply });
   } catch (err) {
@@ -64,7 +89,6 @@ app.post('/api/chatbot', async (req, res) => {
 });
 // ----------- SLUT CHATBOT ENDPOINT -----------
 
-// Registrering
 app.post('/api/signup', async (req, res) => {
   const { name, phone, birthday, email, receive_birthday_emails = false } = req.body;
   if (!name || !phone || !birthday || !email) {
@@ -105,7 +129,6 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
-// Kampanjutskick
 app.post('/send-campaign', async (req, res) => {
   const { subject, message, recipients } = req.body;
   if (!subject || !message || !Array.isArray(recipients)) {
@@ -129,7 +152,6 @@ app.post('/send-campaign', async (req, res) => {
   }
 });
 
-// Hämta kunder
 app.get('/api/contacts', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -144,7 +166,6 @@ app.get('/api/contacts', async (req, res) => {
   }
 });
 
-// Google-login
 app.post('/api/google-login', async (req, res) => {
   const { credential } = req.body;
   if (!credential) return res.status(400).json({ message: 'Saknar credential' });
@@ -176,7 +197,6 @@ app.post('/api/google-login', async (req, res) => {
   }
 });
 
-// Födelsedagsutskick
 async function sendBirthdayEmails() {
   const today = new Date().toISOString().slice(5, 10); // MM-DD
   const { data: customers, error: customerError } = await supabase
@@ -220,6 +240,5 @@ async function sendBirthdayEmails() {
 // Kör varje dag 08:00
 cron.schedule('0 8 * * *', sendBirthdayEmails);
 
-// Starta server
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`✅ Servern körs: http://localhost:${PORT}`));
